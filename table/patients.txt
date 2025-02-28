@@ -1,0 +1,8 @@
+CREATE TABLE hosp.patients (
+    subject_id INT PRIMARY KEY,
+    gender VARCHAR(1),
+    anchor_age INT,
+    anchor_year INT,
+    anchor_year_group VARCHAR(25),
+    dod DATETIME
+);

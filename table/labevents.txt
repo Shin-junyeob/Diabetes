@@ -1,0 +1,20 @@
+CREATE TABLE hosp.labevents (
+    labevent_id INT PRIMARY KEY,
+    subject_id INT,
+    hadm_id INT,
+    specimen_id INT,
+    itemid INT,
+    order_provider_id VARCHAR(10),
+    charttime DATETIME,
+    storetime DATETIME,
+    value VARCHAR(50),
+    valuenum FLOAT,
+    valueuom VARCHAR(10),
+    ref_range_lower FLOAT,
+    ref_range_upper FLOAT,
+    flag VARCHAR(10),
+    priority VARCHAR(10),
+    comments TEXT,
+    FOREIGN KEY (subject_id) REFERENCES patients(subject_id) ON DELETE CASCADE,
+    FOREIGN KEY (hadm_id) REFERENCES admissions(hadm_id) ON DELETE CASCADE
+);

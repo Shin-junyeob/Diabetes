@@ -1,0 +1,17 @@
+CREATE TABLE icu.chartevents (
+    subject_id INT,
+    hadm_id INT,
+    stay_id INT,
+    caregiver_id FLOAT,
+    charttime DATETIME,
+    storetime DATETIME,
+    itemid INT,
+    value TEXT,
+    valuenum FLOAT,
+    valueuom VARCHAR(10),
+    warning FLOAT,
+    PRIMARY KEY (subject_id, hadm_id, itemid, charttime),
+    FOREIGN KEY (subject_id) REFERENCES hosp.patients(subject_id) ON DELETE CASCADE,
+    FOREIGN KEY (hadm_id) REFERENCES hosp.admissions(hadm_id) ON DELETE CASCADE,
+    FOREIGN KEY (stay_id) REFERENCES icu.stays(stay_id) ON DELETE CASCADE
+);

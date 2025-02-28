@@ -1,0 +1,10 @@
+CREATE TABLE hosp.diagnoses_idc (
+    subject_id INT,
+    hadm_id INT,
+    seq_num INT,
+    icd_code VARCHAR(10),
+    icd_version INT,
+    PRIMARY KEY (subject_id, hadm_id, seq_num),
+    FOREIGN KEY (subject_id) REFERENCES patients(subject_id) ON DELETE CASCADE,
+    FOREIGN KEY (hadm_id) REFERENCES admissions(hadm_id) ON DELETE CASCADE
+);
