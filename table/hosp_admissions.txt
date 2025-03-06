@@ -1,0 +1,31 @@
+DROP TABLE IF EXISTS mimiciv_hosp.admissions;
+CREATE TABLE mimiciv_hosp.admissions
+(
+  subject_id INTEGER NOT NULL,
+  hadm_id INTEGER NOT NULL,
+  admittime TIMESTAMP NOT NULL,
+  dischtime TIMESTAMP,
+  deathtime TIMESTAMP,
+  admission_type VARCHAR(40) NOT NULL,
+  admit_provider_id VARCHAR(10),
+  admission_location VARCHAR(60),
+  discharge_location VARCHAR(60),
+  insurance VARCHAR(255),
+  language VARCHAR(25),
+  marital_status VARCHAR(30),
+  race VARCHAR(80),
+  edregtime TIMESTAMP,
+  edouttime TIMESTAMP,
+  hospital_expire_flag SMALLINT
+);
+
+ALTER TABLE mimiciv_hosp.admissions DROP CONSTRAINT IF EXISTS admissions_pk CASCADE;
+ALTER TABLE mimiciv_hosp.admissions
+ADD CONSTRAINT admissions_pk
+  PRIMARY KEY (hadm_id);
+
+ALTER TABLE mimiciv_hosp.admissions DROP CONSTRAINT IF EXISTS admissions_patients_fk;
+ALTER TABLE mimiciv_hosp.admissions
+ADD CONSTRAINT admissions_patients_fk
+  FOREIGN KEY (subject_id)
+  REFERENCES mimiciv_hosp.patients (subject_id);

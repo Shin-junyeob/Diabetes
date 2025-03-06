@@ -1,0 +1,19 @@
+DROP TABLE IF EXISTS mimiciv_icu.d_items;
+CREATE TABLE mimiciv_icu.d_items
+(
+  itemid INTEGER NOT NULL,
+  label VARCHAR(100) NOT NULL,
+  abbreviation VARCHAR(50) NOT NULL,
+  linksto VARCHAR(30) NOT NULL,
+  category VARCHAR(50) NOT NULL,
+  unitname VARCHAR(50),
+  param_type VARCHAR(20) NOT NULL,
+  lownormalvalue FLOAT,
+  highnormalvalue FLOAT
+);
+
+ALTER TABLE mimiciv_icu.d_items DROP CONSTRAINT IF EXISTS d_items_pk CASCADE;
+ALTER TABLE mimiciv_icu.d_items
+ADD CONSTRAINT d_items_pk
+  PRIMARY KEY (itemid);
+

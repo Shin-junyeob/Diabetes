@@ -1,0 +1,138 @@
+LOAD DATA INFILE '/var/lib/mysql-files/hosp/admissions.csv'
+INTO TABLE mimiciv_hosp.admissions
+FIELDS TERMINATED BY ',' ENCLOSED BY '"' 
+LINES TERMINATED BY '\n'
+IGNORE 1 ROWS
+(subject_id, hadm_id, @admittime, @dischtime, @deathtime, admission_type, 
+ admit_provider_id, admission_location, discharge_location, insurance, 
+ language, marital_status, race, @edregtime, @edouttime, hospital_expire_flag)
+SET admittime = IF(@admittime > '2038-01-19 03:14:07', NULL, @admittime),
+    dischtime = IF(@dischtime > '2038-01-19 03:14:07', NULL, @dischtime),
+    deathtime = IF(@deathtime > '2038-01-19 03:14:07', NULL, @deathtime),
+    edregtime = IF(@edregtime > '2038-01-19 03:14:07', NULL, @edregtime),
+    edouttime = IF(@edouttime > '2038-01-19 03:14:07', NULL, @edouttime);
+
+
+LOAD DATA INFILE '/var/lib/mysql-files/hosp/d_labitems.csv'
+INTO TABLE mimiciv_hosp.d_labitems
+FIELDS TERMINATED BY ',' ENCLOSED BY '"' 
+LINES TERMINATED BY '\n'
+IGNORE 1 ROWS
+(itemid, label, fluid, category);
+
+
+LOAD DATA INFILE '/var/lib/mysql-files/hosp/diagnoses_icd.csv'
+INTO TABLE mimiciv_hosp.diagnoses_icd
+FIELDS TERMINATED BY ',' ENCLOSED BY '"' 
+LINES TERMINATED BY '\n'
+IGNORE 1 ROWS
+(subject_id, hadm_id, seq_num, icd_code, icd_version);
+
+
+LOAD DATA INFILE '/var/lib/mysql-files/hosp/labevents.csv'
+INTO TABLE mimiciv_hosp.labevents
+FIELDS TERMINATED BY ',' ENCLOSED BY '"' ESCAPED BY '\\'
+LINES TERMINATED BY '\n'
+IGNORE 1 ROWS
+(labevent_id, subject_id, @hadm_id, specimen_id, itemid, @order_provider_id, 
+ @charttime, @storetime, value, @valuenum, valueuom, @ref_range_lower, 
+ @ref_range_upper, @flag, priority, @comments)
+SET hadm_id = NULLIF(@hadm_id, ''),
+    order_provider_id = NULLIF(@order_provider_id, ''),
+    charttime = NULLIF(@charttime, ''),
+    storetime = NULLIF(@storetime, ''),
+    valuenum = IF(@valuenum = '' OR @valuenum REGEXP '[^0-9.eE+-]', NULL, 
+                  CAST(REPLACE(@valuenum, ',', '') AS DECIMAL(65,30))),
+    ref_range_lower = IF(@ref_range_lower = '' OR @ref_range_lower REGEXP '[^0-9.eE+-]', NULL, 
+                         CAST(REPLACE(@ref_range_lower, ',', '') AS DECIMAL(65,30))),
+    ref_range_upper = IF(@ref_range_upper = '' OR @ref_range_upper REGEXP '[^0-9.eE+-]', NULL, 
+                         CAST(REPLACE(@ref_range_upper, ',', '') AS DECIMAL(65,30))),
+    flag = NULLIF(@flag, ''),
+    comments = NULLIF(@comments, '');
+
+
+LOAD DATA INFILE '/var/lib/mysql-files/hosp/prescriptions.csv'
+INTO TABLE mimiciv_hosp.prescriptions
+FIELDS TERMINATED BY ',' ENCLOSED BY '"' ESCAPED BY '\\'
+LINES TERMINATED BY '\n'
+IGNORE 1 ROWS
+(subject_id, hadm_id, pharmacy_id, poe_id, @poe_seq, order_provider_id, 
+ @starttime, @stoptime, drug_type, drug, formulary_drug_cd, gsn, ndc, 
+ prod_strength, form_rx, dose_val_rx, dose_unit_rx, form_val_disp, form_unit_disp, 
+ @doses_per_24_hrs, route)
+SET poe_seq = NULLIF(@poe_seq, ''),
+    starttime = NULLIF(@starttime, ''),
+    stoptime = NULLIF(@stoptime, ''),
+    doses_per_24_hrs = NULLIF(@doses_per_24_hrs, '');
+
+
+LOAD DATA INFILE '/var/lib/mysql-files/hosp/procedures_icd.csv'
+INTO TABLE mimiciv_hosp.procedures_icd
+FIELDS TERMINATED BY ',' ENCLOSED BY '"' ESCAPED BY '\\'
+LINES TERMINATED BY '\n'
+IGNORE 1 ROWS
+(subject_id, hadm_id, seq_num, @chartdate, icd_code, icd_version)
+SET chartdate = NULLIF(@chartdate, '');
+
+
+LOAD DATA INFILE '/var/lib/mysql-files/icu/d_items.csv'
+INTO TABLE mimiciv_icu.d_items
+FIELDS TERMINATED BY ',' ENCLOSED BY '"' ESCAPED BY '\\'
+LINES TERMINATED BY '\n'
+IGNORE 1 ROWS
+(itemid, label, abbreviation, linksto, category, unitname, param_type, 
+ @lownormalvalue, @highnormalvalue)
+SET lownormalvalue = NULLIF(@lownormalvalue, ''),
+    highnormalvalue = NULLIF(@highnormalvalue, '');
+
+
+LOAD DATA INFILE '/var/lib/mysql-files/icu/icustays.csv'
+INTO TABLE mimiciv_icu.icustays
+FIELDS TERMINATED BY ',' ENCLOSED BY '"' ESCAPED BY '\\'
+LINES TERMINATED BY '\n'
+IGNORE 1 ROWS
+(subject_id, hadm_id, stay_id, first_careunit, last_careunit, 
+ @intime, @outtime, @los)
+SET intime = NULLIF(@intime, ''),
+    outtime = NULLIF(@outtime, ''),
+    los = NULLIF(@los, '');
+
+
+LOAD DATA INFILE '/var/lib/mysql-files/icu/inputevents.csv'
+INTO TABLE mimiciv_icu.inputevents
+FIELDS TERMINATED BY ',' ENCLOSED BY '"' ESCAPED BY '\\'
+LINES TERMINATED BY '\n'
+IGNORE 1 ROWS
+(subject_id, hadm_id, @stay_id, @caregiver_id, @starttime, @endtime, @storetime, 
+ itemid, @amount, amountuom, @rate, rateuom, orderid, @linkorderid, 
+ ordercategoryname, secondaryordercategoryname, ordercomponenttypedescription, 
+ ordercategorydescription, @patientweight, @totalamount, totalamountuom, 
+ @isopenbag, @continueinnextdept, statusdescription, @originalamount, @originalrate)
+SET stay_id = NULLIF(@stay_id, ''),
+    caregiver_id = NULLIF(@caregiver_id, ''),
+    starttime = NULLIF(@starttime, ''),
+    endtime = NULLIF(@endtime, ''),
+    storetime = NULLIF(@storetime, ''),
+    amount = NULLIF(@amount, ''),
+    rate = NULLIF(@rate, ''),
+    linkorderid = NULLIF(@linkorderid, ''),
+    patientweight = NULLIF(@patientweight, ''),
+    totalamount = NULLIF(@totalamount, ''),
+    isopenbag = NULLIF(@isopenbag, ''),
+    continueinnextdept = NULLIF(@continueinnextdept, ''),
+    originalamount = NULLIF(@originalamount, ''),
+    originalrate = NULLIF(@originalrate, '');
+
+
+LOAD DATA INFILE '/var/lib/mysql-files/icu/chartevents.csv'
+INTO TABLE mimiciv_icu.chartevents
+FIELDS TERMINATED BY ',' ENCLOSED BY '"' ESCAPED BY '\\'
+LINES TERMINATED BY '\n'
+IGNORE 1 ROWS
+(subject_id, hadm_id, stay_id, @caregiver_id, @charttime, @storetime, 
+ itemid, value, @valuenum, valueuom, @warning)
+SET caregiver_id = NULLIF(@caregiver_id, ''),
+    charttime = NULLIF(@charttime, ''),
+    storetime = NULLIF(@storetime, ''),
+    valuenum = NULLIF(@valuenum, ''),
+    warning = NULLIF(@warning, '');

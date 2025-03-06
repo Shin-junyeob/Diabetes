@@ -1,0 +1,15 @@
+DROP TABLE IF EXISTS mimiciv_hosp.patients;
+CREATE TABLE mimiciv_hosp.patients
+(
+  subject_id INTEGER NOT NULL,
+  gender CHAR(1) NOT NULL,
+  anchor_age SMALLINT,
+  anchor_year SMALLINT NOT NULL,
+  anchor_year_group VARCHAR(20) NOT NULL,
+  dod DATE
+);
+
+ALTER TABLE mimiciv_hosp.patients DROP CONSTRAINT IF EXISTS patients_pk CASCADE;
+ALTER TABLE mimiciv_hosp.patients
+ADD CONSTRAINT patients_pk
+  PRIMARY KEY (subject_id);

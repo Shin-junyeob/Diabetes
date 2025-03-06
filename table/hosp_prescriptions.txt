@@ -1,0 +1,42 @@
+DROP TABLE IF EXISTS mimiciv_hosp.prescriptions;
+CREATE TABLE mimiciv_hosp.prescriptions
+(
+  subject_id INTEGER NOT NULL,
+  hadm_id INTEGER NOT NULL,
+  pharmacy_id INTEGER NOT NULL,
+  poe_id VARCHAR(25),
+  poe_seq INTEGER,
+  order_provider_id VARCHAR(10),
+  starttime DATETIME(3),
+  stoptime DATETIME(3),
+  drug_type VARCHAR(20) NOT NULL,
+  drug VARCHAR(255) NOT NULL,
+  formulary_drug_cd VARCHAR(50),
+  gsn VARCHAR(255),
+  ndc VARCHAR(25),
+  prod_strength VARCHAR(255),
+  form_rx VARCHAR(25),
+  dose_val_rx VARCHAR(100),
+  dose_unit_rx VARCHAR(50),
+  form_val_disp VARCHAR(50),
+  form_unit_disp VARCHAR(50),
+  doses_per_24_hrs REAL,
+  route VARCHAR(50)
+);
+
+ALTER TABLE mimiciv_hosp.prescriptions DROP CONSTRAINT IF EXISTS prescriptions_pk CASCADE;
+ALTER TABLE mimiciv_hosp.prescriptions
+ADD CONSTRAINT prescriptions_pk
+  PRIMARY KEY (pharmacy_id, drug_type, drug);
+
+ALTER TABLE mimiciv_hosp.prescriptions DROP CONSTRAINT IF EXISTS prescriptions_patients_fk;
+ALTER TABLE mimiciv_hosp.prescriptions
+ADD CONSTRAINT prescriptions_patients_fk
+  FOREIGN KEY (subject_id)
+  REFERENCES mimiciv_hosp.patients (subject_id);
+
+ALTER TABLE mimiciv_hosp.prescriptions DROP CONSTRAINT IF EXISTS prescriptions_admissions_fk;
+ALTER TABLE mimiciv_hosp.prescriptions
+ADD CONSTRAINT prescriptions_admissions_fk
+  FOREIGN KEY (hadm_id)
+  REFERENCES mimiciv_hosp.admissions (hadm_id);

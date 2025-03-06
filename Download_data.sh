@@ -1,2 +1,2 @@
-wget -r -N -c -np --user 'Username' --ask-password --accept 'patients.csv.gz,admissions.csv.gz,diagnoses_icd.csv.gz,prescriptions.csv.gz,labevents.csv.gz,procedures_icd.csv.gz' https://physionet.org/files/mimiciv/2.2/hosp/
-wget -r -N -c -np --user 'Username' --ask-password --accept 'icustays.csv.gz,chartevents.csv.gz,inputevents.csv.gz' https://physionet.org/files/mimiciv/2.2/icu/
+wget -r -N -c -np --user 'Username' --ask-password --accept 'patients.csv.gz,admissions.csv.gz,d_labitems.csv.gz, diagnoses_icd.csv.gz,prescriptions.csv.gz,labevents.csv.gz,procedures_icd.csv.gz' https://physionet.org/files/mimiciv/2.2/hosp/
+wget -r -N -c -np --user 'Username' --ask-password --accept 'icustays.csv.gz,chartevents.csv.gz,d_items.csv.gz, inputevents.csv.gz' https://physionet.org/files/mimiciv/2.2/icu/

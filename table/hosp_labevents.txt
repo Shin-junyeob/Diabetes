@@ -1,0 +1,37 @@
+DROP TABLE IF EXISTS mimiciv_hosp.labevents;
+CREATE TABLE mimiciv_hosp.labevents
+(
+  labevent_id INTEGER NOT NULL,
+  subject_id INTEGER NOT NULL,
+  hadm_id INTEGER,
+  specimen_id INTEGER NOT NULL,
+  itemid INTEGER NOT NULL,
+  order_provider_id VARCHAR(10),
+  charttime DATETIME,
+  storetime DATETIME,
+  value VARCHAR(200),
+  valuenum DOUBLE PRECISION,
+  valueuom VARCHAR(20),
+  ref_range_lower DOUBLE PRECISION,
+  ref_range_upper DOUBLE PRECISION,
+  flag VARCHAR(10),
+  priority VARCHAR(7),
+  comments TEXT
+);
+
+ALTER TABLE mimiciv_hosp.labevents DROP CONSTRAINT IF EXISTS labevents_pk CASCADE;
+ALTER TABLE mimiciv_hosp.labevents
+ADD CONSTRAINT labevents_pk
+  PRIMARY KEY (labevent_id);
+
+ALTER TABLE mimiciv_hosp.labevents DROP CONSTRAINT IF EXISTS labevents_patients_fk;
+ALTER TABLE mimiciv_hosp.labevents
+ADD CONSTRAINT labevents_patients_fk
+  FOREIGN KEY (subject_id)
+  REFERENCES mimiciv_hosp.patients (subject_id);
+
+ALTER TABLE mimiciv_hosp.labevents DROP CONSTRAINT IF EXISTS labevents_d_labitems_fk;
+ALTER TABLE mimiciv_hosp.labevents
+ADD CONSTRAINT labevents_d_labitems_fk
+  FOREIGN KEY (itemid)
+  REFERENCES mimiciv_hosp.d_labitems (itemid);

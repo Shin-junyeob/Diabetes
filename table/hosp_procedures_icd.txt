@@ -1,0 +1,27 @@
+DROP TABLE IF EXISTS mimiciv_hosp.procedures_icd;
+CREATE TABLE mimiciv_hosp.procedures_icd
+(
+  subject_id INTEGER NOT NULL,
+  hadm_id INTEGER NOT NULL,
+  seq_num INTEGER NOT NULL,
+  chartdate DATE NOT NULL,
+  icd_code VARCHAR(7),
+  icd_version SMALLINT
+);
+
+ALTER TABLE mimiciv_hosp.procedures_icd DROP CONSTRAINT IF EXISTS procedures_icd_pk CASCADE;
+ALTER TABLE mimiciv_hosp.procedures_icd
+ADD CONSTRAINT procedures_icd_pk
+  PRIMARY KEY (hadm_id, seq_num, icd_code, icd_version);
+
+ALTER TABLE mimiciv_hosp.procedures_icd DROP CONSTRAINT IF EXISTS procedures_icd_patients_fk;
+ALTER TABLE mimiciv_hosp.procedures_icd
+ADD CONSTRAINT procedures_icd_patients_fk
+  FOREIGN KEY (subject_id)
+  REFERENCES mimiciv_hosp.patients (subject_id);
+
+ALTER TABLE mimiciv_hosp.procedures_icd DROP CONSTRAINT IF EXISTS procedures_icd_admissions_fk;
+ALTER TABLE mimiciv_hosp.procedures_icd
+ADD CONSTRAINT procedures_icd_admissions_fk
+  FOREIGN KEY (hadm_id)
+  REFERENCES mimiciv_hosp.admissions (hadm_id);

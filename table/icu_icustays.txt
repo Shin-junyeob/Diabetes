@@ -1,0 +1,29 @@
+DROP TABLE IF EXISTS mimiciv_icu.icustays;
+CREATE TABLE mimiciv_icu.icustays
+(
+  subject_id INTEGER NOT NULL,
+  hadm_id INTEGER NOT NULL,
+  stay_id INTEGER NOT NULL,
+  first_careunit VARCHAR(255),
+  last_careunit VARCHAR(255),
+  intime DATETIME,
+  outtime DATETIME,
+  los FLOAT
+);
+
+ALTER TABLE mimiciv_icu.icustays DROP CONSTRAINT IF EXISTS icustays_pk CASCADE;
+ALTER TABLE mimiciv_icu.icustays
+ADD CONSTRAINT icustays_pk
+  PRIMARY KEY (stay_id);
+
+ALTER TABLE mimiciv_icu.icustays DROP CONSTRAINT IF EXISTS icustays_patients_fk;
+ALTER TABLE mimiciv_icu.icustays
+ADD CONSTRAINT icustays_patients_fk
+  FOREIGN KEY (subject_id)
+  REFERENCES mimiciv_hosp.patients (subject_id);
+
+ALTER TABLE mimiciv_icu.icustays DROP CONSTRAINT IF EXISTS icustays_admissions_fk;
+ALTER TABLE mimiciv_icu.icustays
+ADD CONSTRAINT icustays_admissions_fk
+  FOREIGN KEY (hadm_id)
+  REFERENCES mimiciv_hosp.admissions (hadm_id);

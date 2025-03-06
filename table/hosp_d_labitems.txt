@@ -1,0 +1,14 @@
+DROP TABLE IF EXISTS mimiciv_hosp.d_labitems;
+CREATE TABLE mimiciv_hosp.d_labitems
+(
+  itemid INTEGER NOT NULL,
+  label VARCHAR(50),
+  fluid VARCHAR(50),
+  category VARCHAR(50)
+);
+
+ALTER TABLE mimiciv_hosp.d_labitems DROP CONSTRAINT IF EXISTS d_labitems_pk CASCADE;
+ALTER TABLE mimiciv_hosp.d_labitems
+ADD CONSTRAINT d_labitems_pk
+  PRIMARY KEY (itemid);
+

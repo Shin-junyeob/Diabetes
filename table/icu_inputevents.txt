@@ -1,0 +1,59 @@
+DROP TABLE IF EXISTS mimiciv_icu.inputevents;
+CREATE TABLE mimiciv_icu.inputevents
+(
+  subject_id INTEGER NOT NULL,
+  hadm_id INTEGER NOT NULL,
+  stay_id INTEGER,
+  caregiver_id INTEGER,
+  starttime DATETIME NOT NULL,
+  endtime DATETIME NOT NULL,
+  storetime DATETIME,
+  itemid INTEGER NOT NULL,
+  amount FLOAT,
+  amountuom VARCHAR(20),
+  rate FLOAT,
+  rateuom VARCHAR(20),
+  orderid INTEGER NOT NULL,
+  linkorderid INTEGER,
+  ordercategoryname VARCHAR(50),
+  secondaryordercategoryname VARCHAR(50),
+  ordercomponenttypedescription VARCHAR(100),
+  ordercategorydescription VARCHAR(30),
+  patientweight FLOAT,
+  totalamount FLOAT,
+  totalamountuom VARCHAR(50),
+  isopenbag SMALLINT,
+  continueinnextdept SMALLINT,
+  statusdescription VARCHAR(20),
+  originalamount FLOAT,
+  originalrate FLOAT
+);
+
+ALTER TABLE mimiciv_icu.inputevents DROP CONSTRAINT IF EXISTS inputevents_pk CASCADE;
+ALTER TABLE mimiciv_icu.inputevents
+ADD CONSTRAINT inputevents_pk
+  PRIMARY KEY (orderid, itemid);
+
+ALTER TABLE mimiciv_icu.inputevents DROP CONSTRAINT IF EXISTS inputevents_patients_fk;
+ALTER TABLE mimiciv_icu.inputevents
+ADD CONSTRAINT inputevents_patients_fk
+  FOREIGN KEY (subject_id)
+  REFERENCES mimiciv_hosp.patients (subject_id);
+
+ALTER TABLE mimiciv_icu.inputevents DROP CONSTRAINT IF EXISTS inputevents_admissions_fk;
+ALTER TABLE mimiciv_icu.inputevents
+ADD CONSTRAINT inputevents_admissions_fk
+  FOREIGN KEY (hadm_id)
+  REFERENCES mimiciv_hosp.admissions (hadm_id);
+
+ALTER TABLE mimiciv_icu.inputevents DROP CONSTRAINT IF EXISTS inputevents_icustays_fk;
+ALTER TABLE mimiciv_icu.inputevents
+ADD CONSTRAINT inputevents_icustays_fk
+  FOREIGN KEY (stay_id)
+  REFERENCES mimiciv_icu.icustays (stay_id);
+
+ALTER TABLE mimiciv_icu.inputevents DROP CONSTRAINT IF EXISTS inputevents_d_items_fk;
+ALTER TABLE mimiciv_icu.inputevents
+ADD CONSTRAINT inputevents_d_items_fk
+  FOREIGN KEY (itemid)
+  REFERENCES mimiciv_icu.d_items (itemid);

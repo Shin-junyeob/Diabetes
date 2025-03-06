@@ -1,0 +1,39 @@
+DROP TABLE IF EXISTS mimiciv_icu.chartevents;
+CREATE TABLE mimiciv_icu.chartevents
+(
+  subject_id INTEGER NOT NULL,
+  hadm_id INTEGER NOT NULL,
+  stay_id INTEGER NOT NULL,
+  caregiver_id INTEGER,
+  charttime TIMESTAMP NOT NULL,
+  storetime TIMESTAMP,
+  itemid INTEGER NOT NULL,
+  value VARCHAR(200),
+  valuenum FLOAT,
+  valueuom VARCHAR(20),
+  warning SMALLINT
+);
+
+ALTER TABLE mimiciv_icu.chartevents DROP CONSTRAINT IF EXISTS chartevents_patients_fk;
+ALTER TABLE mimiciv_icu.chartevents
+ADD CONSTRAINT chartevents_patients_fk
+  FOREIGN KEY (subject_id)
+  REFERENCES mimiciv_hosp.patients (subject_id);
+
+ALTER TABLE mimiciv_icu.chartevents DROP CONSTRAINT IF EXISTS chartevents_admissions_fk;
+ALTER TABLE mimiciv_icu.chartevents
+ADD CONSTRAINT chartevents_admissions_fk
+  FOREIGN KEY (hadm_id)
+  REFERENCES mimiciv_hosp.admissions (hadm_id);
+
+ALTER TABLE mimiciv_icu.chartevents DROP CONSTRAINT IF EXISTS chartevents_icustays_fk;
+ALTER TABLE mimiciv_icu.chartevents
+ADD CONSTRAINT chartevents_icustays_fk
+  FOREIGN KEY (stay_id)
+  REFERENCES mimiciv_icu.icustays (stay_id);
+
+ALTER TABLE mimiciv_icu.chartevents DROP CONSTRAINT IF EXISTS chartevents_d_items_fk;
+ALTER TABLE mimiciv_icu.chartevents
+ADD CONSTRAINT chartevents_d_items_fk
+  FOREIGN KEY (itemid)
+  REFERENCES mimiciv_icu.d_items (itemid);
