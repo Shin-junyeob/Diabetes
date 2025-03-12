@@ -1,0 +1,95 @@
+######## 1. 전체 환자 중 당뇨환자 비율 ########
+
+```sql
+WITH diabetes_patients AS (
+    SELECT DISTINCT subject_id
+    FROM mimiciv_hosp.diagnoses_icd
+    WHERE icd_code IN ('E0010', '25001', 'E0011', '25000')
+),
+icu_patients AS (
+    SELECT DISTINCT subject_id
+    FROM mimiciv_icu.icustays
+)
+SELECT 
+    'hosp' AS dataset,
+    COUNT(DISTINCT d.subject_id) AS diabetes_count,
+    COUNT(DISTINCT p.subject_id) AS total_patients,
+    COUNT(DISTINCT d.subject_id) * 100.0 / COUNT(DISTINCT p.subject_id) AS diabetes_percentage
+FROM mimiciv_hosp.patients p
+LEFT JOIN diabetes_patients d ON p.subject_id = d.subject_id
+
+UNION ALL
+
+SELECT 
+    'icu' AS dataset,
+    COUNT(DISTINCT d.subject_id) AS diabetes_count,
+    COUNT(DISTINCT i.subject_id) AS total_patients,
+    COUNT(DISTINCT d.subject_id) * 100.0 / COUNT(DISTINCT i.subject_id) AS diabetes_percentage
+FROM mimiciv_icu.icustays i
+LEFT JOIN diabetes_patients d ON i.subject_id = d.subject_id;
+```
+
+######## 2. T1DM vs T2DM 환자 비율 ########
+
+```sql
+WITH diabetes_patients AS (
+    SELECT DISTINCT subject_id
+    FROM mimiciv_hosp.diagnoses_icd
+    WHERE icd_code IN ('E0010', '25001', 'E0011', '25000')
+),
+t1dm_patients AS (
+    SELECT DISTINCT subject_id
+    FROM mimiciv_hosp.diagnoses_icd
+    WHERE icd_code IN ('E0010', '25001')
+),
+t2dm_patients AS (
+    SELECT DISTINCT subject_id
+    FROM mimiciv_hosp.diagnoses_icd
+    WHERE icd_code IN ('E0011', '25000')
+),
+both_dm_patients AS (
+    SELECT DISTINCT t1.subject_id
+    FROM t1dm_patients t1
+    JOIN t2dm_patients t2 ON t1.subject_id = t2.subject_id
+),
+hosp_diabetes AS (
+    SELECT DISTINCT subject_id FROM diabetes_patients
+    WHERE subject_id IN (SELECT subject_id FROM mimiciv_hosp.patients)
+),
+icu_diabetes AS (
+    SELECT DISTINCT subject_id FROM diabetes_patients
+    WHERE subject_id IN (SELECT subject_id FROM mimiciv_icu.icustays)
+)
+
+SELECT 
+    'hosp' AS dataset,
+    COUNT(DISTINCT only_t1dm.subject_id) AS only_t1dm_count,
+    COUNT(DISTINCT only_t2dm.subject_id) AS only_t2dm_count,
+    COUNT(DISTINCT both_patients.subject_id) AS both_t1dm_t2dm_count,
+    COUNT(DISTINCT d.subject_id) AS diabetes_total,
+    COUNT(DISTINCT only_t1dm.subject_id) * 100.0 / NULLIF(COUNT(DISTINCT d.subject_id), 0) AS only_t1dm_percentage,
+    COUNT(DISTINCT only_t2dm.subject_id) * 100.0 / NULLIF(COUNT(DISTINCT d.subject_id), 0) AS only_t2dm_percentage,
+    COUNT(DISTINCT both_patients.subject_id) * 100.0 / NULLIF(COUNT(DISTINCT d.subject_id), 0) AS both_t1dm_t2dm_percentage
+FROM hosp_diabetes d
+LEFT JOIN t1dm_patients only_t1dm ON d.subject_id = only_t1dm.subject_id
+LEFT JOIN t2dm_patients only_t2dm ON d.subject_id = only_t2dm.subject_id
+LEFT JOIN both_dm_patients both_patients ON d.subject_id = both_patients.subject_id
+WHERE only_t1dm.subject_id IS NOT NULL OR only_t2dm.subject_id IS NOT NULL
+
+UNION ALL
+
+SELECT 
+    'icu' AS dataset,
+    COUNT(DISTINCT only_t1dm.subject_id) AS only_t1dm_count,
+    COUNT(DISTINCT only_t2dm.subject_id) AS only_t2dm_count,
+    COUNT(DISTINCT both_patients.subject_id) AS both_t1dm_t2dm_count,
+    COUNT(DISTINCT d.subject_id) AS diabetes_total,
+    COUNT(DISTINCT only_t1dm.subject_id) * 100.0 / NULLIF(COUNT(DISTINCT d.subject_id), 0) AS only_t1dm_percentage,
+    COUNT(DISTINCT only_t2dm.subject_id) * 100.0 / NULLIF(COUNT(DISTINCT d.subject_id), 0) AS only_t2dm_percentage,
+    COUNT(DISTINCT both_patients.subject_id) * 100.0 / NULLIF(COUNT(DISTINCT d.subject_id), 0) AS both_t1dm_t2dm_percentage
+FROM icu_diabetes d
+LEFT JOIN t1dm_patients only_t1dm ON d.subject_id = only_t1dm.subject_id
+LEFT JOIN t2dm_patients only_t2dm ON d.subject_id = only_t2dm.subject_id
+LEFT JOIN both_dm_patients both_patients ON d.subject_id = both_patients.subject_id
+WHERE only_t1dm.subject_id IS NOT NULL OR only_t2dm.subject_id IS NOT NULL;
+```

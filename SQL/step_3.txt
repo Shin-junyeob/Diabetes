@@ -1,0 +1,158 @@
+######## 6. 재입원률 ########
+
+```sql
+WITH diabetes_patients AS (
+    SELECT DISTINCT subject_id,
+        CASE 
+            WHEN icd_code IN ('E0010', '25001') THEN 'T1DM'
+            WHEN icd_code IN ('E0011', '25000') THEN 'T2DM'
+        END AS diabetes_type
+    FROM mimiciv_hosp.diagnoses_icd
+    WHERE icd_code IN ('E0010', '25001', 'E0011', '25000')
+),
+hosp_readmissions AS (
+    SELECT subject_id, COUNT(DISTINCT hadm_id) AS admission_count
+    FROM mimiciv_hosp.diagnoses_icd
+    WHERE icd_code IN ('E0010', '25001', 'E0011', '25000')
+    GROUP BY subject_id
+    HAVING COUNT(DISTINCT hadm_id) >= 2
+),
+icu_patients AS (
+    SELECT DISTINCT d.subject_id, 
+        CASE 
+            WHEN d.icd_code IN ('E0010', '25001') THEN 'T1DM'
+            WHEN d.icd_code IN ('E0011', '25000') THEN 'T2DM'
+        END AS diabetes_type
+    FROM mimiciv_hosp.diagnoses_icd d
+    JOIN mimiciv_icu.icustays i ON d.subject_id = i.subject_id
+    WHERE d.icd_code IN ('E0010', '25001', 'E0011', '25000')
+),
+icu_readmissions AS (
+    SELECT subject_id, COUNT(DISTINCT hadm_id) AS admission_count
+    FROM mimiciv_icu.icustays
+    GROUP BY subject_id
+    HAVING COUNT(DISTINCT hadm_id) >= 2
+)
+
+SELECT 
+    'hosp' AS dataset,
+    dp.diabetes_type,
+    COUNT(DISTINCT dp.subject_id) AS total_patients,
+    COUNT(DISTINCT CASE WHEN hr.subject_id IS NOT NULL THEN dp.subject_id END) AS readmitted_patients,
+    ROUND(100 * COUNT(DISTINCT CASE WHEN hr.subject_id IS NOT NULL THEN dp.subject_id END) / NULLIF(COUNT(DISTINCT dp.subject_id), 0), 2) AS readmission_rate
+FROM diabetes_patients dp
+LEFT JOIN hosp_readmissions hr ON dp.subject_id = hr.subject_id
+GROUP BY dp.diabetes_type
+
+UNION ALL
+
+SELECT 
+    'icu' AS dataset,
+    icu.diabetes_type,
+    COUNT(DISTINCT icu.subject_id) AS total_patients,
+    COUNT(DISTINCT CASE WHEN ir.subject_id IS NOT NULL THEN icu.subject_id END) AS readmitted_patients,
+    ROUND(100 * COUNT(DISTINCT CASE WHEN ir.subject_id IS NOT NULL THEN icu.subject_id END) / NULLIF(COUNT(DISTINCT icu.subject_id), 0), 2) AS readmission_rate
+FROM icu_patients icu
+LEFT JOIN icu_readmissions ir ON icu.subject_id = ir.subject_id
+GROUP BY icu.diabetes_type;
+```
+
+######## 7. HOSP → ICU 전환 비율 ########
+
+```sql
+WITH hosp_diabetes_patients AS (
+    SELECT DISTINCT h.subject_id, h.hadm_id, h.admittime,
+        CASE 
+            WHEN d.icd_code IN ('E0010', '25001') THEN 'T1DM'
+            WHEN d.icd_code IN ('E0011', '25000') THEN 'T2DM'
+        END AS diabetes_type
+    FROM mimiciv_hosp.admissions h
+    JOIN mimiciv_hosp.diagnoses_icd d ON h.hadm_id = d.hadm_id
+    WHERE d.icd_code IN ('E0010', '25001', 'E0011', '25000')
+),
+icu_patients AS (
+    SELECT DISTINCT subject_id, hadm_id, intime
+    FROM mimiciv_icu.icustays
+),
+icu_diabetes_patients AS (
+    SELECT DISTINCT hdp.subject_id, hdp.hadm_id, hdp.diabetes_type
+    FROM hosp_diabetes_patients hdp
+    JOIN icu_patients icu 
+        ON hdp.subject_id = icu.subject_id 
+        AND hdp.hadm_id = icu.hadm_id
+        AND icu.intime > hdp.admittime
+)
+
+SELECT 
+    hdp.diabetes_type,
+    COUNT(DISTINCT hdp.subject_id) AS hosp_patients,
+    COUNT(DISTINCT idp.subject_id) AS icu_with_same_diagnosis,
+    ROUND(100 * COUNT(DISTINCT idp.subject_id) / NULLIF(COUNT(DISTINCT hdp.subject_id), 0), 2) AS icu_transfer_rate_with_same_diagnosis
+FROM hosp_diabetes_patients hdp
+LEFT JOIN icu_diabetes_patients idp 
+    ON hdp.subject_id = idp.subject_id AND hdp.hadm_id = idp.hadm_id AND hdp.diabetes_type = idp.diabetes_type
+GROUP BY hdp.diabetes_type;
+```
+
+######## 8. ICU 전환 환자의 사망률 ########
+
+```sql
+WITH hosp_diabetes_patients AS (
+    SELECT DISTINCT h.subject_id, h.hadm_id, h.admittime, h.hospital_expire_flag,
+        CASE 
+            WHEN d.icd_code IN ('E0010', '25001') THEN 'T1DM'
+            WHEN d.icd_code IN ('E0011', '25000') THEN 'T2DM'
+        END AS diabetes_type
+    FROM mimiciv_hosp.admissions h
+    JOIN mimiciv_hosp.diagnoses_icd d ON h.hadm_id = d.hadm_id
+    WHERE d.icd_code IN ('E0010', '25001', 'E0011', '25000')
+),
+icu_patients AS (
+    SELECT DISTINCT subject_id, hadm_id, intime
+    FROM mimiciv_icu.icustays
+),
+icu_with_same_diagnosis AS (
+    SELECT DISTINCT hdp.subject_id, hdp.hadm_id, hdp.diabetes_type, hdp.hospital_expire_flag
+    FROM hosp_diabetes_patients hdp
+    JOIN icu_patients icu 
+        ON hdp.subject_id = icu.subject_id 
+        AND hdp.hadm_id = icu.hadm_id
+        AND icu.intime > hdp.admittime
+    JOIN mimiciv_hosp.diagnoses_icd d
+        ON hdp.subject_id = d.subject_id 
+        AND hdp.hadm_id = d.hadm_id
+        AND (d.icd_code IN ('E0010', '25001', 'E0011', '25000'))
+)
+
+SELECT 
+    idp.diabetes_type,
+    COUNT(DISTINCT idp.subject_id) AS icu_with_same_diagnosis,
+    COUNT(DISTINCT CASE WHEN idp.hospital_expire_flag = 1 THEN idp.subject_id END) AS deceased_patients,
+    ROUND(100 * COUNT(DISTINCT CASE WHEN idp.hospital_expire_flag = 1 THEN idp.subject_id END) / NULLIF(COUNT(DISTINCT idp.subject_id), 0), 2) AS icu_mortality_rate
+FROM icu_with_same_diagnosis idp
+GROUP BY idp.diabetes_type;
+```
+
+######## 9. ICU 전체 당뇨환자의 사망률 ########
+
+```sql
+WITH icu_diabetes_patients AS (
+    SELECT DISTINCT d.subject_id, d.hadm_id, a.hospital_expire_flag,
+        CASE 
+            WHEN d.icd_code IN ('E0010', '25001') THEN 'T1DM'
+            WHEN d.icd_code IN ('E0011', '25000') THEN 'T2DM'
+        END AS diabetes_type
+    FROM mimiciv_hosp.diagnoses_icd d
+    JOIN mimiciv_icu.icustays i ON d.subject_id = i.subject_id
+    JOIN mimiciv_hosp.admissions a ON d.hadm_id = a.hadm_id
+    WHERE d.icd_code IN ('E0010', '25001', 'E0011', '25000')
+)
+
+SELECT 
+    idp.diabetes_type,
+    COUNT(DISTINCT idp.subject_id) AS icu_patients,
+    COUNT(DISTINCT CASE WHEN idp.hospital_expire_flag = 1 THEN idp.subject_id END) AS deceased_patients,
+    ROUND(100 * COUNT(DISTINCT CASE WHEN idp.hospital_expire_flag = 1 THEN idp.subject_id END) / NULLIF(COUNT(DISTINCT idp.subject_id), 0), 2) AS icu_mortality_rate
+FROM icu_diabetes_patients idp
+GROUP BY idp.diabetes_type;
+```

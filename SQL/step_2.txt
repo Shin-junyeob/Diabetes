@@ -1,0 +1,242 @@
+######## 3. 심혈관 질환 비교 ########
+
+```sql
+WITH diabetes_patients AS (
+    SELECT 
+        subject_id,
+        CASE 
+            WHEN icd_code IN ('E0010', '25001') THEN 'T1DM'
+            WHEN icd_code IN ('E0011', '25000') THEN 'T2DM'
+        END AS diabetes_type
+    FROM mimiciv_hosp.diagnoses_icd
+    WHERE icd_code IN ('E0010', 'E0011', '25000', '25001')
+),
+hosp_analysis AS (
+    SELECT 
+        dp.diabetes_type,
+        COUNT(DISTINCT CASE WHEN dg.icd_code LIKE '401%' OR dg.icd_code = 'I10' THEN dp.subject_id END) AS hypertension_patients,
+        COUNT(DISTINCT CASE WHEN dg.icd_code LIKE '428%' OR dg.icd_code LIKE 'I50%' THEN dp.subject_id END) AS heart_failure_patients,
+        COUNT(DISTINCT CASE WHEN dg.icd_code LIKE '410%' OR dg.icd_code LIKE 'I21%' OR dg.icd_code LIKE 'I25%' THEN dp.subject_id END) AS myocardial_infarction_patients,
+        COUNT(DISTINCT dp.subject_id) AS total_patients,
+        ROUND(100 * COUNT(DISTINCT CASE WHEN dg.icd_code LIKE '401%' OR dg.icd_code = 'I10' THEN dp.subject_id END) / COUNT(DISTINCT dp.subject_id), 2) AS hypertension_rate,
+        ROUND(100 * COUNT(DISTINCT CASE WHEN dg.icd_code LIKE '428%' OR dg.icd_code LIKE 'I50%' THEN dp.subject_id END) / COUNT(DISTINCT dp.subject_id), 2) AS heart_failure_rate,
+        ROUND(100 * COUNT(DISTINCT CASE WHEN dg.icd_code LIKE '410%' OR dg.icd_code LIKE 'I21%' OR dg.icd_code LIKE 'I25%' THEN dp.subject_id END) / COUNT(DISTINCT dp.subject_id), 2) AS myocardial_infarction_rate
+    FROM diabetes_patients dp
+    LEFT JOIN mimiciv_hosp.diagnoses_icd dg ON dp.subject_id = dg.subject_id
+    GROUP BY dp.diabetes_type
+),
+icu_analysis AS (
+    SELECT 
+        dp.diabetes_type,
+        COUNT(DISTINCT CASE WHEN dg.icd_code LIKE '401%' OR dg.icd_code = 'I10' THEN dp.subject_id END) AS hypertension_patients,
+        COUNT(DISTINCT CASE WHEN dg.icd_code LIKE '428%' OR dg.icd_code LIKE 'I50%' THEN dp.subject_id END) AS heart_failure_patients,
+        COUNT(DISTINCT CASE WHEN dg.icd_code LIKE '410%' OR dg.icd_code LIKE 'I21%' OR dg.icd_code LIKE 'I25%' THEN dp.subject_id END) AS myocardial_infarction_patients,
+        COUNT(DISTINCT dp.subject_id) AS total_patients,
+        ROUND(100 * COUNT(DISTINCT CASE WHEN dg.icd_code LIKE '401%' OR dg.icd_code = 'I10' THEN dp.subject_id END) / COUNT(DISTINCT dp.subject_id), 2) AS hypertension_rate,
+        ROUND(100 * COUNT(DISTINCT CASE WHEN dg.icd_code LIKE '428%' OR dg.icd_code LIKE 'I50%' THEN dp.subject_id END) / COUNT(DISTINCT dp.subject_id), 2) AS heart_failure_rate,
+        ROUND(100 * COUNT(DISTINCT CASE WHEN dg.icd_code LIKE '410%' OR dg.icd_code LIKE 'I21%' OR dg.icd_code LIKE 'I25%' THEN dp.subject_id END) / COUNT(DISTINCT dp.subject_id), 2) AS myocardial_infarction_rate
+    FROM diabetes_patients dp
+    LEFT JOIN mimiciv_hosp.diagnoses_icd dg ON dp.subject_id = dg.subject_id
+    WHERE dp.subject_id IN (SELECT subject_id FROM mimiciv_icu.icustays)
+    GROUP BY dp.diabetes_type
+)
+
+SELECT 'hosp' AS dataset, 
+       diabetes_type, 
+       hypertension_patients, 
+       heart_failure_patients, 
+       myocardial_infarction_patients, 
+       total_patients, 
+       hypertension_rate, 
+       heart_failure_rate, 
+       myocardial_infarction_rate
+FROM hosp_analysis
+
+UNION ALL
+
+SELECT 'icu' AS dataset, 
+       diabetes_type, 
+       hypertension_patients, 
+       heart_failure_patients, 
+       myocardial_infarction_patients, 
+       total_patients, 
+       hypertension_rate, 
+       heart_failure_rate, 
+       myocardial_infarction_rate
+FROM icu_analysis;
+```
+
+######## 4. 신장 질환 비교 ########
+
+```sql
+WITH diabetes_patients AS (
+    SELECT 
+        subject_id,
+        CASE 
+            WHEN icd_code IN ('E0010', '25001') THEN 'T1DM'
+            WHEN icd_code IN ('E0011', '25000') THEN 'T2DM'
+        END AS diabetes_type
+    FROM mimiciv_hosp.diagnoses_icd
+    WHERE icd_code IN ('E0010', 'E0011', '25000', '25001')
+),
+kidney_disease AS (
+    SELECT 
+        subject_id,
+        CASE 
+            WHEN icd_code LIKE '584%' OR icd_code LIKE 'N17%' THEN 'AKI'
+            WHEN icd_code LIKE '585%' OR icd_code LIKE 'N18%' THEN 'CKD'
+            WHEN icd_code LIKE '586%' OR icd_code LIKE 'N19%' THEN 'Unknown'
+        END AS kidney_disease_type
+    FROM mimiciv_hosp.diagnoses_icd
+    WHERE icd_code LIKE '584%' OR icd_code LIKE 'N17%'
+       OR icd_code LIKE '585%' OR icd_code LIKE 'N18%'
+       OR icd_code LIKE '586%' OR icd_code LIKE 'N19%'
+),
+hosp_analysis AS (
+    SELECT 
+        dp.diabetes_type,
+        COUNT(DISTINCT CASE WHEN kd.kidney_disease_type = 'AKI' THEN dp.subject_id END) AS acute_kidney_injury_patients,
+        COUNT(DISTINCT CASE WHEN kd.kidney_disease_type = 'CKD' THEN dp.subject_id END) AS chronic_kidney_disease_patients,
+        COUNT(DISTINCT CASE WHEN kd.kidney_disease_type = 'Unknown' THEN dp.subject_id END) AS unspecified_kidney_failure_patients,
+        COUNT(DISTINCT dp.subject_id) AS total_patients,
+        ROUND(100 * COUNT(DISTINCT CASE WHEN kd.kidney_disease_type = 'AKI' THEN dp.subject_id END) / COUNT(DISTINCT dp.subject_id), 2) AS acute_kidney_injury_rate,
+        ROUND(100 * COUNT(DISTINCT CASE WHEN kd.kidney_disease_type = 'CKD' THEN dp.subject_id END) / COUNT(DISTINCT dp.subject_id), 2) AS chronic_kidney_disease_rate,
+        ROUND(100 * COUNT(DISTINCT CASE WHEN kd.kidney_disease_type = 'Unknown' THEN dp.subject_id END) / COUNT(DISTINCT dp.subject_id), 2) AS unspecified_kidney_failure_rate
+    FROM diabetes_patients dp
+    LEFT JOIN kidney_disease kd ON dp.subject_id = kd.subject_id
+    GROUP BY dp.diabetes_type
+),
+icu_analysis AS (
+    SELECT 
+        dp.diabetes_type,
+        COUNT(DISTINCT CASE WHEN kd.kidney_disease_type = 'AKI' THEN dp.subject_id END) AS acute_kidney_injury_patients,
+        COUNT(DISTINCT CASE WHEN kd.kidney_disease_type = 'CKD' THEN dp.subject_id END) AS chronic_kidney_disease_patients,
+        COUNT(DISTINCT CASE WHEN kd.kidney_disease_type = 'Unknown' THEN dp.subject_id END) AS unspecified_kidney_failure_patients,
+        COUNT(DISTINCT dp.subject_id) AS total_patients,
+        ROUND(100 * COUNT(DISTINCT CASE WHEN kd.kidney_disease_type = 'AKI' THEN dp.subject_id END) / COUNT(DISTINCT dp.subject_id), 2) AS acute_kidney_injury_rate,
+        ROUND(100 * COUNT(DISTINCT CASE WHEN kd.kidney_disease_type = 'CKD' THEN dp.subject_id END) / COUNT(DISTINCT dp.subject_id), 2) AS chronic_kidney_disease_rate,
+        ROUND(100 * COUNT(DISTINCT CASE WHEN kd.kidney_disease_type = 'Unknown' THEN dp.subject_id END) / COUNT(DISTINCT dp.subject_id), 2) AS unspecified_kidney_failure_rate
+    FROM diabetes_patients dp
+    LEFT JOIN kidney_disease kd ON dp.subject_id = kd.subject_id
+    WHERE dp.subject_id IN (SELECT subject_id FROM mimiciv_icu.icustays)
+    GROUP BY dp.diabetes_type
+)
+
+SELECT 'hosp' AS dataset, 
+       diabetes_type, 
+       acute_kidney_injury_patients, 
+       chronic_kidney_disease_patients, 
+       unspecified_kidney_failure_patients, 
+       total_patients, 
+       acute_kidney_injury_rate, 
+       chronic_kidney_disease_rate, 
+       unspecified_kidney_failure_rate
+FROM hosp_analysis
+
+UNION ALL
+
+SELECT 'icu' AS dataset, 
+       diabetes_type, 
+       acute_kidney_injury_patients, 
+       chronic_kidney_disease_patients, 
+       unspecified_kidney_failure_patients, 
+       total_patients, 
+       acute_kidney_injury_rate, 
+       chronic_kidney_disease_rate, 
+       unspecified_kidney_failure_rate
+FROM icu_analysis;
+```
+
+######## 5. 신경 질환 비교 ########
+
+```sql
+WITH diabetes_patients AS (
+    SELECT 
+        subject_id,
+        CASE 
+            WHEN icd_code IN ('E0010', '25001') THEN 'T1DM'
+            WHEN icd_code IN ('E0011', '25000') THEN 'T2DM'
+        END AS diabetes_type
+    FROM mimiciv_hosp.diagnoses_icd
+    WHERE icd_code IN ('E0010', 'E0011', '25000', '25001')
+),
+neurological_disease AS (
+    SELECT 
+        subject_id,
+        CASE 
+            WHEN icd_code = '3572' OR icd_code LIKE '2506%' OR icd_code = 'G632' 
+                 OR icd_code IN ('E0851', 'E0861', 'E0951', 'E0961', 'E1051', 'E1061', 
+                                 'E1151', 'E1161', 'E1351', 'E1361') 
+                 THEN 'Diabetic Neuropathy'
+            WHEN icd_code LIKE '434%' OR icd_code LIKE 'I63%' 
+                 OR icd_code LIKE '430%' OR icd_code LIKE 'I60%' 
+                 OR icd_code LIKE '431%' OR icd_code LIKE 'I61%' 
+                 THEN 'Stroke'
+            WHEN icd_code LIKE '3569' OR icd_code LIKE 'G629' 
+                 OR icd_code LIKE '3559' OR icd_code LIKE 'G618%' 
+                 THEN 'Peripheral Neuropathy'
+        END AS neuro_disease_type
+    FROM mimiciv_hosp.diagnoses_icd
+    WHERE icd_code IN ('3572', 'G632', 'E0851', 'E0861', 'E0951', 'E0961', 
+                       'E1051', 'E1061', 'E1151', 'E1161', 'E1351', 'E1361')
+       OR icd_code LIKE '2506%'
+       OR icd_code LIKE '434%' OR icd_code LIKE 'I63%' 
+       OR icd_code LIKE '430%' OR icd_code LIKE 'I60%' 
+       OR icd_code LIKE '431%' OR icd_code LIKE 'I61%' 
+       OR icd_code LIKE '3569' OR icd_code LIKE 'G629' 
+       OR icd_code LIKE '3559' OR icd_code LIKE 'G618%'
+),
+hosp_analysis AS (
+    SELECT 
+        dp.diabetes_type,
+        COUNT(DISTINCT CASE WHEN nd.neuro_disease_type = 'Diabetic Neuropathy' THEN dp.subject_id END) AS diabetic_neuropathy_patients,
+        COUNT(DISTINCT CASE WHEN nd.neuro_disease_type = 'Stroke' THEN dp.subject_id END) AS stroke_patients,
+        COUNT(DISTINCT CASE WHEN nd.neuro_disease_type = 'Peripheral Neuropathy' THEN dp.subject_id END) AS peripheral_neuropathy_patients,
+        COUNT(DISTINCT dp.subject_id) AS total_patients,
+        ROUND(100 * COUNT(DISTINCT CASE WHEN nd.neuro_disease_type = 'Diabetic Neuropathy' THEN dp.subject_id END) / COUNT(DISTINCT dp.subject_id), 2) AS diabetic_neuropathy_rate,
+        ROUND(100 * COUNT(DISTINCT CASE WHEN nd.neuro_disease_type = 'Stroke' THEN dp.subject_id END) / COUNT(DISTINCT dp.subject_id), 2) AS stroke_rate,
+        ROUND(100 * COUNT(DISTINCT CASE WHEN nd.neuro_disease_type = 'Peripheral Neuropathy' THEN dp.subject_id END) / COUNT(DISTINCT dp.subject_id), 2) AS peripheral_neuropathy_rate
+    FROM diabetes_patients dp
+    LEFT JOIN neurological_disease nd ON dp.subject_id = nd.subject_id
+    GROUP BY dp.diabetes_type
+),
+icu_analysis AS (
+    SELECT 
+        dp.diabetes_type,
+        COUNT(DISTINCT CASE WHEN nd.neuro_disease_type = 'Diabetic Neuropathy' THEN dp.subject_id END) AS diabetic_neuropathy_patients,
+        COUNT(DISTINCT CASE WHEN nd.neuro_disease_type = 'Stroke' THEN dp.subject_id END) AS stroke_patients,
+        COUNT(DISTINCT CASE WHEN nd.neuro_disease_type = 'Peripheral Neuropathy' THEN dp.subject_id END) AS peripheral_neuropathy_patients,
+        COUNT(DISTINCT dp.subject_id) AS total_patients,
+        ROUND(100 * COUNT(DISTINCT CASE WHEN nd.neuro_disease_type = 'Diabetic Neuropathy' THEN dp.subject_id END) / COUNT(DISTINCT dp.subject_id), 2) AS diabetic_neuropathy_rate,
+        ROUND(100 * COUNT(DISTINCT CASE WHEN nd.neuro_disease_type = 'Stroke' THEN dp.subject_id END) / COUNT(DISTINCT dp.subject_id), 2) AS stroke_rate,
+        ROUND(100 * COUNT(DISTINCT CASE WHEN nd.neuro_disease_type = 'Peripheral Neuropathy' THEN dp.subject_id END) / COUNT(DISTINCT dp.subject_id), 2) AS peripheral_neuropathy_rate
+    FROM diabetes_patients dp
+    LEFT JOIN neurological_disease nd ON dp.subject_id = nd.subject_id
+    WHERE dp.subject_id IN (SELECT subject_id FROM mimiciv_icu.icustays)
+    GROUP BY dp.diabetes_type
+)
+
+SELECT 'hosp' AS dataset, 
+       diabetes_type, 
+       diabetic_neuropathy_patients, 
+       stroke_patients, 
+       peripheral_neuropathy_patients, 
+       total_patients, 
+       diabetic_neuropathy_rate, 
+       stroke_rate, 
+       peripheral_neuropathy_rate
+FROM hosp_analysis
+
+UNION ALL
+
+SELECT 'icu' AS dataset, 
+       diabetes_type, 
+       diabetic_neuropathy_patients, 
+       stroke_patients, 
+       peripheral_neuropathy_patients, 
+       total_patients, 
+       diabetic_neuropathy_rate, 
+       stroke_rate, 
+       peripheral_neuropathy_rate
+FROM icu_analysis;
+```
